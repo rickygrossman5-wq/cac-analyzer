@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CAC MoM Analyzer — PLTFRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Archivo:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="vendor/papaparse.min.js"></script>
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="vendor/chart.umd.js"></script>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="grain"></div>
+
+<header class="masthead">
+  <div class="tick"></div>
+  <span class="eyebrow">PLTFRM · NEW-TO-BRAND · MONTH OVER MONTH</span>
+  <nav class="page-nav">
+    <a href="index.html" class="active">MoM Movement</a>
+    <a href="deepdive.html">SP Deep Dive</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <h1 class="hero-title">CAC<span class="hero-rule">/</span>Movement</h1>
+  <p class="hero-sub">Drop two new-to-brand campaign exports. We hold spend, customer acquisition cost, NTB sales and share up to the light and show you where the month actually moved — by category, by campaign, and what to do next.</p>
+</section>
+
+<!-- STAGE 1: UPLOAD -->
+<section class="stage" id="upload-stage">
+  <div class="stage-index"><span>01</span><span class="stage-name">Load the months</span></div>
+  <div class="upload-grid">
+    <label class="drop" id="drop-early">
+      <input type="file" accept=".csv" id="file-early" hidden>
+      <span class="drop-period">Earlier period</span>
+      <span class="drop-cue" id="cue-early">Click or drop a CSV</span>
+      <span class="drop-file" id="name-early"></span>
+    </label>
+    <div class="arrow">→</div>
+    <label class="drop" id="drop-late">
+      <input type="file" accept=".csv" id="file-late" hidden>
+      <span class="drop-period">Later period</span>
+      <span class="drop-cue" id="cue-late">Click or drop a CSV</span>
+      <span class="drop-file" id="name-late"></span>
+    </label>
+  </div>
+  <div class="label-row">
+    <div class="field"><label for="label-early">Earlier label</label><input type="text" id="label-early" value="April"></div>
+    <div class="field"><label for="label-late">Later label</label><input type="text" id="label-late" value="May"></div>
+  </div>
+</section>
+
+<!-- STAGE 2: CATEGORIES -->
+<section class="stage" id="cat-stage">
+  <div class="stage-index"><span>02</span><span class="stage-name">Define categories</span>
+    <label class="skip-toggle"><input type="checkbox" id="skip-cats"> <span>Skip — analyze without categories</span></label>
+  </div>
+  <p class="stage-note">A campaign joins a category if its name contains any of the terms below (case-insensitive). Comma-separate terms. Edit, remove, or add rows to match your account. Optional — you can run the report with no categories at all.</p>
+  <div id="cat-body">
+    <div id="cat-rows"></div>
+    <button class="ghost-btn" id="add-cat">+ Add category</button>
+  </div>
+</section>
+
+<div class="run-bar">
+  <button class="run-btn" id="run" disabled>Analyze month over month</button>
+  <span class="run-hint" id="run-hint">Load both files to continue</span>
+</div>
+
+<!-- STAGE 3: RESULTS -->
+<main id="results" hidden>
+
+  <section class="stage results-head">
+    <div class="stage-index"><span>03</span><span class="stage-name" id="period-name">Results</span></div>
+    <button class="ghost-btn" id="export">↓ Export Excel workbook</button>
+  </section>
+
+  <!-- Channel scope -->
+  <section class="scope-bar">
+    <span class="scope-label">Channel</span>
+    <div class="scope-toggle" id="scope-toggle">
+      <button class="scope-opt active" data-scope="all">All</button>
+      <button class="scope-opt" data-scope="ppc">PPC only <span class="scope-count" id="count-ppc"></span></button>
+      <button class="scope-opt" data-scope="dsp">DSP only <span class="scope-count" id="count-dsp"></span></button>
+    </div>
+    <span class="scope-note">DSP = leading-number or consideration / conversion / STV campaigns</span>
+  </section>
+
+  <!-- Headline cards -->
+  <section class="cards" id="headline-cards"></section>
+
+  <!-- Overall + NB table -->
+  <section class="block">
+    <h2 class="block-title">Overall &amp; new-to-brand</h2>
+    <div class="table-wrap" id="summary-table"></div>
+  </section>
+
+  <!-- Category -->
+  <section class="block" id="cat-block">
+    <h2 class="block-title">By category</h2>
+    <div class="chart-frame"><canvas id="cat-chart"></canvas></div>
+    <div class="table-wrap" id="cat-table"></div>
+    <p class="caption" id="cat-caption"></p>
+  </section>
+
+  <!-- Movers -->
+  <section class="block">
+    <h2 class="block-title">Campaign movers <span class="block-sub">— click a column to sort</span></h2>
+    <div class="movers-controls">
+      <input type="text" id="movers-search" class="movers-search" placeholder="Filter campaigns…">
+      <span class="movers-count" id="movers-count"></span>
+    </div>
+    <div class="table-wrap" id="movers-table"></div>
+    <button class="ghost-btn" id="toggle-movers">Show all campaigns</button>
+  </section>
+
+  <!-- Recommendations -->
+  <section class="block">
+    <h2 class="block-title">Recommendations <span class="block-sub">— excludes <code>| B |</code> campaigns</span></h2>
+    <div class="rec-grid">
+      <div class="rec-col">
+        <div class="rec-head pause">Pause / cut</div>
+        <div id="pause-list"></div>
+      </div>
+      <div class="rec-col">
+        <div class="rec-head lean">Lean in</div>
+        <div id="lean-list"></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-rule"></div>
+  <span class="footer-mark">PLTFRM</span>
+  <span class="footer-note">Runs entirely in your browser · no data leaves this page</span>
+</footer>
+
+<script src="analysis.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
