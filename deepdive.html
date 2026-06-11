@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sponsored Products CAC Deep Dive — PLTFRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Archivo:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="vendor/papaparse.min.js"></script>
+<script src="vendor/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="grain"></div>
+
+<header class="masthead">
+  <div class="tick"></div>
+  <span class="eyebrow">PLTFRM · SPONSORED PRODUCTS · CAC DEEP DIVE</span>
+  <nav class="page-nav">
+    <a href="index.html">MoM Movement</a>
+    <a href="deepdive.html" class="active">SP Deep Dive</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <h1 class="hero-title">Deep<span class="hero-rule">/</span>Dive</h1>
+  <p class="hero-sub">Drop the most recent month's NTB-by-campaign-and-target export. Every Sponsored Products campaign opens up to reveal the targets inside it — spend, sales, new-to-brand, and CAC, all the way down.</p>
+</section>
+
+<!-- UPLOAD -->
+<section class="stage" id="upload-stage">
+  <div class="stage-index"><span>01</span><span class="stage-name">Load the report</span></div>
+  <p class="stage-note">This is the NTB-by-campaign + target report for a single month (Sponsored Products only). Drag it in the same way as the MoM page.</p>
+  <label class="drop drop-wide" id="drop-file">
+    <input type="file" accept=".csv" id="file-dd" hidden>
+    <span class="drop-period">Most recent month · campaign + target</span>
+    <span class="drop-cue" id="cue-dd">Click or drop a CSV</span>
+    <span class="drop-file" id="name-dd"></span>
+  </label>
+</section>
+
+<div class="run-bar">
+  <button class="run-btn" id="run" disabled>Open the deep dive</button>
+  <span class="run-hint" id="run-hint">Load the report to continue</span>
+</div>
+
+<!-- RESULTS -->
+<main id="results" hidden>
+
+  <section class="stage results-head">
+    <div class="stage-index"><span>02</span><span class="stage-name">Sponsored Products CAC Deep Dive</span></div>
+    <button class="ghost-btn" id="export">↓ Export Excel workbook</button>
+  </section>
+
+  <!-- summary cards -->
+  <section class="cards" id="dd-cards"></section>
+
+  <!-- controls -->
+  <section class="block" style="padding-bottom:0">
+    <div class="movers-controls">
+      <input type="text" id="dd-search" class="movers-search" placeholder="Filter campaigns…">
+      <span class="movers-count" id="dd-count"></span>
+      <button class="ghost-btn" id="dd-expand-all">Expand all</button>
+    </div>
+  </section>
+
+  <!-- campaign list -->
+  <section class="block" style="padding-top:1rem">
+    <div class="table-wrap">
+      <table class="dd-table" id="dd-table">
+        <thead id="dd-head"></thead>
+        <tbody id="dd-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-rule"></div>
+  <span class="footer-mark">PLTFRM</span>
+  <span class="footer-note">Runs entirely in your browser · no data leaves this page</span>
+</footer>
+
+<script src="deepdive-analysis.js"></script>
+<script src="deepdive-app.js"></script>
+</body>
+</html>
