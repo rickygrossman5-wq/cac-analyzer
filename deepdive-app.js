@@ -70,6 +70,7 @@ function shortName(c) { return c.replace(/^PLTFRM\s*\|\s*/, "").replace(/\s*\|\s
       drop.classList.add("loaded");
       document.getElementById("run").disabled = false;
       document.getElementById("run-hint").textContent = "Ready";
+      saveDDSession(file.name);
     };
     reader.onerror = () => { cue.textContent = "Couldn't read that file"; };
     reader.readAsText(file);
@@ -83,8 +84,47 @@ function shortName(c) { return c.replace(/^PLTFRM\s*\|\s*/, "").replace(/\s*\|\s
 document.getElementById("run").addEventListener("click", () => {
   renderAll();
   document.getElementById("results").hidden = false;
-  document.getElementById("results").scrollIntoView({ behavior: "smooth" });
+  if (!dd.restoring) document.getElementById("results").scrollIntoView({ behavior: "smooth" });
 });
+
+/* ---- session persistence (survives navigation within the tab) ---- */
+const DD_KEY = "cacDeepDiveState_v1";
+function saveDDSession(fileName) {
+  try {
+    sessionStorage.setItem(DD_KEY, JSON.stringify({ campaigns: dd.campaigns, name: fileName || "" }));
+  } catch (e) { /* ignore */ }
+}
+function restoreDDSession() {
+  let saved;
+  try { saved = JSON.parse(sessionStorage.getItem(DD_KEY)); } catch (e) { return; }
+  if (!saved || !saved.campaigns || !saved.campaigns.length) return;
+  dd.campaigns = saved.campaigns;
+  document.getElementById("cue-dd").textContent = `${dd.campaigns.length} campaigns`;
+  document.getElementById("name-dd").textContent = saved.name || "";
+  document.getElementById("drop-file").classList.add("loaded");
+  document.getElementById("run").disabled = false;
+  document.getElementById("run-hint").textContent = "Ready";
+  dd.restoring = true;
+  document.getElementById("run").click();
+  dd.restoring = false;
+}
+function resetDD() {
+  try { sessionStorage.removeItem(DD_KEY); } catch (e) {}
+  dd.campaigns = null; dd.query = ""; dd.expanded = new Set(); dd.allExpanded = false;
+  document.getElementById("file-dd").value = "";
+  document.getElementById("cue-dd").textContent = "Click or drop a CSV";
+  document.getElementById("name-dd").textContent = "";
+  document.getElementById("drop-file").classList.remove("loaded");
+  document.getElementById("run").disabled = true;
+  document.getElementById("run-hint").textContent = "Load the report to continue";
+  const s = document.getElementById("dd-search"); if (s) s.value = "";
+  document.getElementById("results").hidden = true;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+const ddReset = document.getElementById("reset");
+if (ddReset) ddReset.addEventListener("click", resetDD);
+
+restoreDDSession();
 
 /* ---- render ---- */
 function renderAll() { renderCards(); renderTable(); }

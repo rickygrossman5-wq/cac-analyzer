@@ -1,3 +1,8 @@
+/* ============================================================
+   PLTFRM design system — Archivo + DM Mono, warm near-black,
+   rounded cards, pill controls, zebra tables.
+   Mapped onto the existing markup class names.
+   ============================================================ */
 :root{
   --black:#0C0C0A;
   --ink:#161614;
@@ -152,7 +157,7 @@ table.dd-table thead th:first-child{z-index:6;background:var(--ink)}
 .dd-toggle:hover{border-color:var(--white);color:var(--white)}
 .dd-campname{font-family:var(--sans);font-weight:600;font-size:.9rem}
 .dd-tcount{font-family:var(--mono);color:var(--gray-dim);font-size:.7rem;margin-left:.5rem}
-.dd-tcount::before{content:"Â·  "}
+.dd-tcount::before{content:"·  "}
 .dd-target-row td{color:var(--gray);background:var(--black)}
 .dd-target-row td:first-child{padding-left:2.6rem;background:var(--black)}
 .dd-target-row:hover td{background:var(--card)}

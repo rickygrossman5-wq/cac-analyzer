@@ -6,10 +6,10 @@
 <title>CAC MoM Analyzer — PLTFRM</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Archivo:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="vendor/papaparse.min.js"></script>
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="vendor/chart.umd.js"></script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -27,6 +27,29 @@
 <section class="hero">
   <h1 class="hero-title">CAC<span class="hero-rule">/</span>Movement</h1>
   <p class="hero-sub">Drop two new-to-brand campaign exports. We hold spend, customer acquisition cost, NTB sales and share up to the light and show you where the month actually moved — by category, by campaign, and what to do next.</p>
+</section>
+
+<!-- STAGE 0: COPY AMC QUERY -->
+<section class="stage query-stage" id="query-stage">
+  <div class="stage-index"><span>00</span><span class="stage-name">Copy AMC query — Campaign NTB report</span></div>
+  <p class="stage-note">Run this query in your brand's AMC instance to generate the two CSVs this page needs (one per month).</p>
+  <div class="query-grid">
+    <div class="query-box">
+      <div class="query-toolbar">
+        <span class="query-tag">Campaign NTB report</span>
+        <button class="ghost-btn copy-btn" id="copy-query">Copy query</button>
+      </div>
+      <pre class="query-code" id="query-text">-- Campaign NTB query will be provided here --</pre>
+    </div>
+    <ol class="query-steps">
+      <li>Copy the query above.</li>
+      <li>Log in to your brand's <strong>AMC</strong> instance.</li>
+      <li>Open the <strong>Query editor</strong>.</li>
+      <li>Paste the query and set the date range.</li>
+      <li><strong>Run it twice</strong> — once for the <em>previous month</em>, once for the <em>current month</em>.</li>
+      <li>Download both CSVs and drop them below (earlier month on the left, later on the right).</li>
+    </ol>
+  </div>
 </section>
 
 <!-- STAGE 1: UPLOAD -->
@@ -48,8 +71,8 @@
     </label>
   </div>
   <div class="label-row">
-    <div class="field"><label for="label-early">Earlier label</label><input type="text" id="label-early" value="April"></div>
-    <div class="field"><label for="label-late">Later label</label><input type="text" id="label-late" value="May"></div>
+    <div class="field"><label for="label-early">Earlier label</label><input type="text" id="label-early" placeholder="e.g. April"></div>
+    <div class="field"><label for="label-late">Later label</label><input type="text" id="label-late" placeholder="e.g. May"></div>
   </div>
 </section>
 
@@ -75,7 +98,10 @@
 
   <section class="stage results-head">
     <div class="stage-index"><span>03</span><span class="stage-name" id="period-name">Results</span></div>
-    <button class="ghost-btn" id="export">↓ Export Excel workbook</button>
+    <div class="head-actions">
+      <button class="ghost-btn" id="reset">↺ Reset</button>
+      <button class="ghost-btn" id="export">↓ Export Excel workbook</button>
+    </div>
   </section>
 
   <!-- Channel scope -->
@@ -85,8 +111,9 @@
       <button class="scope-opt active" data-scope="all">All</button>
       <button class="scope-opt" data-scope="ppc">PPC only <span class="scope-count" id="count-ppc"></span></button>
       <button class="scope-opt" data-scope="dsp">DSP only <span class="scope-count" id="count-dsp"></span></button>
+      <button class="scope-opt" data-scope="other">Others <span class="scope-count" id="count-other"></span></button>
     </div>
-    <span class="scope-note">DSP = leading-number or consideration / conversion / STV campaigns</span>
+    <span class="scope-note">PPC = starts PLTFRM | … with | NB | or | B | · DSP = dated or conversion/consideration/STV · Others = anything else</span>
   </section>
 
   <!-- Headline cards -->
@@ -142,5 +169,7 @@
 
 <script src="analysis.js"></script>
 <script src="app.js"></script>
+<script src="query-campaign.js"></script>
+<script src="copy-query.js"></script>
 </body>
 </html>

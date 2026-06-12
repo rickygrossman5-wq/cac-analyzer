@@ -6,9 +6,9 @@
 <title>Sponsored Products CAC Deep Dive — PLTFRM</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Archivo:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="vendor/papaparse.min.js"></script>
+<script src="vendor/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -26,6 +26,29 @@
 <section class="hero">
   <h1 class="hero-title">Deep<span class="hero-rule">/</span>Dive</h1>
   <p class="hero-sub">Drop the most recent month's NTB-by-campaign-and-target export. Every Sponsored Products campaign opens up to reveal the targets inside it — spend, sales, new-to-brand, and CAC, all the way down.</p>
+</section>
+
+<!-- STAGE 0: COPY AMC QUERY -->
+<section class="stage query-stage" id="query-stage">
+  <div class="stage-index"><span>00</span><span class="stage-name">Copy AMC query — Targeting NTB report</span></div>
+  <p class="stage-note">Run this query in your brand's AMC instance to generate the report this page needs. This page is for optimizing at the target level, so you only need the current month.</p>
+  <div class="query-grid">
+    <div class="query-box">
+      <div class="query-toolbar">
+        <span class="query-tag">Targeting NTB report</span>
+        <button class="ghost-btn copy-btn" id="copy-query">Copy query</button>
+      </div>
+      <pre class="query-code" id="query-text">-- Targeting NTB query will be provided here --</pre>
+    </div>
+    <ol class="query-steps">
+      <li>Copy the query above.</li>
+      <li>Log in to your brand's <strong>AMC</strong> instance.</li>
+      <li>Open the <strong>Query editor</strong>.</li>
+      <li>Paste the query and set the date range.</li>
+      <li><strong>Run it once</strong> — for the <em>current month</em> only.</li>
+      <li>Download the CSV and drop it below.</li>
+    </ol>
+  </div>
 </section>
 
 <!-- UPLOAD -->
@@ -50,7 +73,10 @@
 
   <section class="stage results-head">
     <div class="stage-index"><span>02</span><span class="stage-name">Sponsored Products CAC Deep Dive</span></div>
-    <button class="ghost-btn" id="export">↓ Export Excel workbook</button>
+    <div class="head-actions">
+      <button class="ghost-btn" id="reset">↺ Reset</button>
+      <button class="ghost-btn" id="export">↓ Export Excel workbook</button>
+    </div>
   </section>
 
   <!-- summary cards -->
@@ -85,5 +111,7 @@
 
 <script src="deepdive-analysis.js"></script>
 <script src="deepdive-app.js"></script>
+<script src="query-targeting.js"></script>
+<script src="copy-query.js"></script>
 </body>
 </html>
