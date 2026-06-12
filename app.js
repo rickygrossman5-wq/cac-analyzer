@@ -7,12 +7,8 @@ const state = {
   moverSort: { key: "cac_delta", dir: "desc" }, moverQuery: "",
 };
 
-const DEFAULT_CATEGORIES = [
-  { name: "Whey", terms: "whey, protein powder" },
-  { name: "Legend", terms: "legend, preworkout, pre workout" },
-  { name: "Clear", terms: "clear" },
-  { name: "Hydration", terms: "hydration, electrolyte, liquid iv" },
-];
+// Categories start blank so each user adds their own (no presets to clear out).
+const STARTING_CATEGORY_ROWS = 3;
 
 /* ---------- file handling ---------- */
 function wireDrop(side) {
@@ -60,7 +56,7 @@ function addCatRow(name = "", terms = "") {
   row.querySelector(".cat-del").addEventListener("click", () => row.remove());
   catRows.appendChild(row);
 }
-DEFAULT_CATEGORIES.forEach((c) => addCatRow(c.name, c.terms));
+for (let i = 0; i < STARTING_CATEGORY_ROWS; i++) addCatRow();
 document.getElementById("add-cat").addEventListener("click", () => addCatRow());
 
 document.getElementById("skip-cats").addEventListener("change", (e) => {
@@ -97,10 +93,91 @@ document.getElementById("run").addEventListener("click", () => {
   state.moverQuery = "";
   const ms = document.getElementById("movers-search"); if (ms) ms.value = "";
   document.querySelectorAll(".scope-opt").forEach((b) => b.classList.toggle("active", b.dataset.scope === "all"));
+  saveSession();
   render();
   document.getElementById("results").hidden = false;
-  document.getElementById("results").scrollIntoView({ behavior: "smooth" });
+  if (!state.restoring) document.getElementById("results").scrollIntoView({ behavior: "smooth" });
 });
+
+/* ---------- session persistence (survives page navigation within the tab) ---------- */
+const MOM_KEY = "cacMomState_v1";
+function saveSession() {
+  try {
+    const cats = [];
+    catRows.querySelectorAll(".cat-row").forEach((row) => {
+      cats.push({ name: row.querySelector(".cat-name").value, terms: row.querySelector(".cat-terms").value });
+    });
+    sessionStorage.setItem(MOM_KEY, JSON.stringify({
+      earlyRecs: state.earlyRecs, lateRecs: state.lateRecs,
+      labels: {
+        early: document.getElementById("label-early").value,
+        late: document.getElementById("label-late").value,
+      },
+      names: {
+        early: document.getElementById("name-early").textContent,
+        late: document.getElementById("name-late").textContent,
+      },
+      cats, skip: document.getElementById("skip-cats").checked,
+    }));
+  } catch (e) { /* storage unavailable: silently skip */ }
+}
+
+function restoreSession() {
+  let saved;
+  try { saved = JSON.parse(sessionStorage.getItem(MOM_KEY)); } catch (e) { return; }
+  if (!saved || !saved.earlyRecs || !saved.lateRecs) return;
+
+  state.earlyRecs = saved.earlyRecs; state.lateRecs = saved.lateRecs;
+  document.getElementById("label-early").value = saved.labels.early || "";
+  document.getElementById("label-late").value = saved.labels.late || "";
+
+  // restore file "loaded" cues
+  const setLoaded = (side, name, recs) => {
+    document.getElementById(`cue-${side}`).textContent = `${recs.length} campaigns`;
+    document.getElementById(`name-${side}`).textContent = name || "";
+    document.getElementById(`drop-${side}`).classList.add("loaded");
+  };
+  setLoaded("early", saved.names && saved.names.early, saved.earlyRecs);
+  setLoaded("late", saved.names && saved.names.late, saved.lateRecs);
+
+  // restore categories
+  if (saved.cats && saved.cats.length) {
+    catRows.innerHTML = "";
+    saved.cats.forEach((c) => addCatRow(c.name, c.terms));
+  }
+  if (saved.skip) {
+    document.getElementById("skip-cats").checked = true;
+    document.getElementById("cat-body").style.display = "none";
+  }
+
+  updateRunState();
+  // re-run the analysis silently (no scroll) so it's on screen after navigating back
+  state.restoring = true;
+  document.getElementById("run").click();
+  state.restoring = false;
+}
+
+function resetAll() {
+  try { sessionStorage.removeItem(MOM_KEY); } catch (e) {}
+  state.earlyRaw = state.lateRaw = state.earlyRecs = state.lateRecs = state.result = null;
+  ["early", "late"].forEach((side) => {
+    document.getElementById(`file-${side}`).value = "";
+    document.getElementById(`cue-${side}`).textContent = "Click or drop a CSV";
+    document.getElementById(`name-${side}`).textContent = "";
+    document.getElementById(`drop-${side}`).classList.remove("loaded");
+  });
+  document.getElementById("label-early").value = "";
+  document.getElementById("label-late").value = "";
+  catRows.innerHTML = "";
+  for (let i = 0; i < STARTING_CATEGORY_ROWS; i++) addCatRow();
+  document.getElementById("skip-cats").checked = false;
+  document.getElementById("cat-body").style.display = "";
+  document.getElementById("results").hidden = true;
+  updateRunState();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+const resetBtn = document.getElementById("reset");
+if (resetBtn) resetBtn.addEventListener("click", resetAll);
 
 /* ---------- formatting helpers ---------- */
 const money = (n) => n === null ? "n/a" : (Math.abs(n) >= 1000 ? "$" + (n / 1000).toFixed(1) + "K" : "$" + n.toFixed(0));
@@ -108,6 +185,7 @@ const moneyFull = (n) => n === null ? "n/a" : "$" + n.toLocaleString("en-US", { 
 const cac = (n) => n === null ? "n/a" : "$" + n.toFixed(2);
 const pct = (n) => n === null ? "n/a" : n.toFixed(1) + "%";
 const num = (n) => n === null ? "n/a" : Math.round(n).toLocaleString("en-US");
+const roasFmt = (n) => n === null ? "n/a" : n.toFixed(2) + "x";
 
 // direction: which way is "good" for a metric
 const GOOD_DOWN = new Set(["cac"]);
@@ -123,7 +201,7 @@ function deltaText(metric, d) {
   const sign = d.abs > 0 ? "+" : "";
   const base = metric === "cac" ? `${sign}$${d.abs.toFixed(2)}`
     : metric === "ntb_pct" ? `${sign}${d.abs.toFixed(1)}pt`
-    : metric === "roas" ? `${sign}${d.abs.toFixed(2)}`
+    : (metric === "roas" || metric === "ntb_roas") ? `${sign}${d.abs.toFixed(2)}x`
     : metric === "ntb_purchases" ? `${sign}${num(d.abs)}`
     : `${sign}${money(d.abs)}`;
   return d.pct !== null ? `${base} · ${sign}${d.pct}%` : base;
@@ -137,6 +215,7 @@ function render() {
   document.getElementById("period-name").textContent = `${r.labels.early} → ${r.labels.late}`;
   document.getElementById("count-ppc").textContent = r.counts.ppc.late;
   document.getElementById("count-dsp").textContent = r.counts.dsp.late;
+  const co = document.getElementById("count-other"); if (co) co.textContent = r.counts.other.late;
   renderScope(r); renderCategories(r); renderMovers(r); renderRecs(r);
 }
 
@@ -148,15 +227,17 @@ function renderScope(r) {
   renderSummary(r, s);
 }
 
-const SCOPE_NAME = { all: "All channels", ppc: "PPC only", dsp: "DSP only" };
+const SCOPE_NAME = { all: "All channels", ppc: "PPC only", dsp: "DSP only", other: "Others" };
 
 function renderCards(r, s, scope) {
   const o = s.overall, n = s.nb;
-  const cacLabel = scope === "dsp" ? "DSP CAC" : scope === "ppc" ? "PPC CAC" : "Overall CAC";
-  // second card: NB CAC for All/PPC; for DSP show campaign count instead (NB is always n/a there)
+  const cacLabel = scope === "dsp" ? "DSP CAC" : scope === "ppc" ? "PPC CAC" : scope === "other" ? "Others CAC" : "Overall CAC";
+  // second card: NB CAC for All/PPC; for DSP/Other show campaign count (NB is usually n/a there)
   let secondCard;
-  if (scope === "dsp") {
-    secondCard = { label: "DSP campaigns", val: String(r.counts.dsp.late), flow: `${r.counts.dsp.early} →`, m: "spend", d: { abs: r.counts.dsp.late - r.counts.dsp.early, pct: null } };
+  if (scope === "dsp" || scope === "other") {
+    const key = scope;
+    const label = scope === "dsp" ? "DSP campaigns" : "Other campaigns";
+    secondCard = { label, val: String(r.counts[key].late), flow: `${r.counts[key].early} →`, m: "count", d: { abs: r.counts[key].late - r.counts[key].early, pct: null } };
   } else {
     secondCard = { label: "NB CAC", val: cac(n.late.cac), flow: `${cac(n.early.cac)} →`, m: "cac", d: n.delta.cac };
   }
@@ -164,12 +245,12 @@ function renderCards(r, s, scope) {
     { label: cacLabel, val: cac(o.late.cac), flow: `${cac(o.early.cac)} →`, m: "cac", d: o.delta.cac },
     secondCard,
     { label: `Spend`, val: money(o.late.spend), flow: `${money(o.early.spend)} →`, m: "spend", d: o.delta.spend },
-    { label: `NTB sales`, val: money(o.late.ntb_sales), flow: `${money(o.early.ntb_sales)} →`, m: "ntb_sales", d: o.delta.ntb_sales },
-    { label: `NTB purchases`, val: num(o.late.ntb_purchases), flow: `${num(o.early.ntb_purchases)} →`, m: "ntb_purchases", d: o.delta.ntb_purchases },
+    { label: `ROAS`, val: roasFmt(o.late.roas), flow: `${roasFmt(o.early.roas)} →`, m: "roas", d: o.delta.roas },
+    { label: `NTB ROAS`, val: roasFmt(o.late.ntb_roas), flow: `${roasFmt(o.early.ntb_roas)} →`, m: "ntb_roas", d: o.delta.ntb_roas },
   ];
   document.getElementById("headline-cards").innerHTML = cards.map((c) => {
     let deltaHtml;
-    if (c.label === "DSP campaigns") {
+    if (c.m === "count") {
       const dd = c.d.abs;
       deltaHtml = `<div class="card-delta flat">${dd > 0 ? "+" + dd : dd < 0 ? dd : "no change"}${dd !== 0 ? " campaign" + (Math.abs(dd) === 1 ? "" : "s") : ""}</div>`;
     } else {
@@ -185,10 +266,10 @@ function renderCards(r, s, scope) {
   }).join("");
 }
 
-const METRICS = [["spend","Spend"],["ntb_purchases","NTB purch"],["ntb_sales","NTB sales"],["cac","CAC"],["ntb_pct","NTB %"],["roas","ROAS"]];
+const METRICS = [["spend","Spend"],["ntb_purchases","NTB purch"],["ntb_sales","NTB sales"],["cac","CAC"],["ntb_pct","NTB %"],["roas","ROAS"],["ntb_roas","NTB ROAS"]];
 function fmtMetric(key, v){
   if(key==="cac")return cac(v); if(key==="spend"||key==="ntb_sales")return moneyFull(v);
-  if(key==="ntb_pct")return pct(v); if(key==="roas")return v===null?"n/a":v.toFixed(2)+"x";
+  if(key==="ntb_pct")return pct(v); if(key==="roas"||key==="ntb_roas")return v===null?"n/a":v.toFixed(2)+"x";
   return num(v);
 }
 
@@ -196,7 +277,7 @@ function renderSummary(r, s) {
   const scope = state.scope || "all";
   const seg = (label, data) => METRICS.map(([k, name], i) => `
     <tr>
-      ${i === 0 ? `<td class="seg-label" rowspan="6">${escapeHtml(label)}</td>` : ""}
+      ${i === 0 ? `<td class="seg-label" rowspan="${METRICS.length}">${escapeHtml(label)}</td>` : ""}
       <td class="metric-name">${name}</td>
       <td class="muted">${fmtMetric(k, data.early[k])}</td>
       <td>${fmtMetric(k, data.late[k])}</td>
@@ -211,6 +292,9 @@ function renderSummary(r, s) {
     // replace the (empty) NB block with one segment per DSP campaign
     body += r.dspCampaigns.map((c) => seg(shortName(c.name), c)).join("");
     extraNote = `<p class="caption">Each DSP campaign shown month over month. ${r.dspCampaigns.length} campaign${r.dspCampaigns.length === 1 ? "" : "s"} classified as DSP.</p>`;
+  } else if (scope === "other") {
+    body += r.otherCampaigns.map((c) => seg(shortName(c.name), c)).join("");
+    extraNote = `<p class="caption">Campaigns that don't match the PPC or DSP naming rules (e.g. a misspelled prefix or a different vendor). ${r.otherCampaigns.length} campaign${r.otherCampaigns.length === 1 ? "" : "s"} in Others — worth checking the names.</p>`;
   }
 
   document.getElementById("summary-table").innerHTML = `
@@ -418,10 +502,10 @@ function shortName(c) { return c.replace(/^PLTFRM\s*\|\s*/, "").replace(/\s*\|\s
 document.getElementById("export").addEventListener("click", () => {
   const r = state.result; const wb = XLSX.utils.book_new();
   const el = r.labels.early, ll = r.labels.late;
-  const MET = [["spend","Spend $"],["ntb_purchases","NTB Purch"],["ntb_sales","NTB Sales $"],["cac","CAC $"],["ntb_pct","NTB %"],["roas","ROAS"]];
+  const MET = [["spend","Spend $"],["ntb_purchases","NTB Purch"],["ntb_sales","NTB Sales $"],["cac","CAC $"],["ntb_pct","NTB %"],["roas","ROAS"],["ntb_roas","NTB ROAS"]];
 
-  // Summary — all three channel scopes (All / PPC / DSP), each with Overall + NB
-  const SCOPES = [["All channels", r.scopes.all], ["PPC only", r.scopes.ppc], ["DSP only", r.scopes.dsp]];
+  // Summary — all channel scopes (All / PPC / DSP / Others), each with Overall + NB
+  const SCOPES = [["All channels", r.scopes.all], ["PPC only", r.scopes.ppc], ["DSP only", r.scopes.dsp], ["Others", r.scopes.other]];
   const sum = [["Channel","Segment","Metric",el,ll,"Δ abs","Δ %"]];
   SCOPES.forEach(([scopeName, s])=>{
     [["Overall",s.overall],["NB-only (| NB |)",s.nb]].forEach(([seg,data])=>{
@@ -458,3 +542,6 @@ document.getElementById("export").addEventListener("click", () => {
 
   XLSX.writeFile(wb, `CAC_MoM_${el}_to_${ll}.xlsx`);
 });
+
+// Restore any saved session AFTER all helpers are defined (avoids TDZ on const formatters).
+restoreSession();
